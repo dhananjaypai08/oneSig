@@ -3,7 +3,8 @@ import { Address } from "viem"
 export type Token = {
     address: Address;
     value: bigint;
-    name: "USDT" | "DAI" | "WETH"
+    name: "USDT" | "DAI" | "WETH",
+    decimals: number;
 }
 
 export const TokenAddresses: {

@@ -27,6 +27,7 @@ export async function dustSweep(
                 token.address,
                 token.value.toString(),
                 TokenAddresses[chainId]["USDC"],
+                token.decimals,
                 wallet,
                 providers[chainId],
                 chainId

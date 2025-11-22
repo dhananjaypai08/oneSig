@@ -6,13 +6,14 @@ export async function generateSwapCalldata(
     fromTokenAddress: string,
     amount: string,          // input amount in token decimals, e.g. '1000000000000000000' for 1 ETH
     toTokenAddress: string,
+    toTokenDecimals: number,
     recipient: string,       // the receiver address
     provider: ethers.providers.JsonRpcProvider, // Ethers provider
     chainId: number          // e.g., 1 for mainnet
 ) {
     // Construct Token objects (you need token decimals)
     const fromToken = new UniswapToken(chainId, fromTokenAddress, 6); // update decimals accordingly
-    const toToken = new UniswapToken(chainId, toTokenAddress, 18);      // update decimals accordingly
+    const toToken = new UniswapToken(chainId, toTokenAddress, toTokenDecimals);      // update decimals accordingly
 
     const router = new AlphaRouter({ chainId, provider });
 

@@ -13,3 +13,4 @@ remappings = [
 
 [rpc_endpoints]
 garfield = "https://zircuit-garfield-testnet.drpc.org"
+sepolia = "https://sepolia.infura.io/v3/2WCbZ8YpmuPxUtM6PzbFOfY5k4B"

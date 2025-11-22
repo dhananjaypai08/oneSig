@@ -48,5 +48,6 @@ export async function dustSweep(
         batchBuilder.endBatch();
     }
     const executor = await builder.useAccount(account).buildAndSign();
+    console.log("executor: ", executor);
     executor.execute(callback)
 }

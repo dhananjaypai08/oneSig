@@ -4,6 +4,8 @@ export type NexusNetwork = 'mainnet' | 'testnet';
 
 let currentNetwork: NexusNetwork = 'mainnet';
 let sdk = new NexusSDK({ network: currentNetwork });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let cachedProvider: any = null;
 
 export function getCurrentNetwork(): NexusNetwork {
   return currentNetwork;
@@ -15,10 +17,14 @@ export function isInitialized() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function switchNetwork(network: NexusNetwork, provider?: any) {
-  if (network === currentNetwork && sdk.isInitialized()) return;
+  // No change needed
+  if (network === currentNetwork) return;
+
+  const wasInitialized = sdk.isInitialized();
+  const providerToUse = provider || cachedProvider;
 
   // Deinit existing SDK if initialized
-  if (sdk.isInitialized()) {
+  if (wasInitialized) {
     await sdk.deinit();
   }
 
@@ -26,9 +32,9 @@ export async function switchNetwork(network: NexusNetwork, provider?: any) {
   currentNetwork = network;
   sdk = new NexusSDK({ network });
 
-  // Re-initialize with provider if provided
-  if (provider) {
-    await sdk.initialize(provider);
+  // Auto re-initialize with cached provider if SDK was previously initialized
+  if (wasInitialized && providerToUse) {
+    await sdk.initialize(providerToUse);
   }
 }
 
@@ -38,6 +44,8 @@ export async function initializeWithProvider(provider: any) {
 
   if (sdk.isInitialized()) return;
 
+  // Cache the provider for network switches
+  cachedProvider = provider;
   await sdk.initialize(provider);
 }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { SwapCard } from "@/components/swap-card"
-import { UnifiedBalanceCard } from "@/components/unified-balance-card"
+import { PortfolioCard } from "@/components/portfolio-card"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function Home() {
@@ -20,7 +20,7 @@ export default function Home() {
         <main className="w-full max-w-4xl space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <SwapCard />
-            <UnifiedBalanceCard />
+            <PortfolioCard />
           </div>
         </main>
 

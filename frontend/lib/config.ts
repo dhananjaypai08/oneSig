@@ -1,5 +1,39 @@
 import { createPublicClient, http, erc20Abi, type Address } from 'viem'
 import { sepolia } from 'viem/chains'
+import { defineChain } from 'viem'
+
+export const arbitrum = defineChain({
+  id: 42161,
+  name: 'Arbitrum',
+  network: 'arbitrum',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-arb/05b28599-1cde-4a79-aff2-d275bffc6017'] },
+    public: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-arb/05b28599-1cde-4a79-aff2-d275bffc6017'] },
+  },
+});
+
+export const base = defineChain({
+  id: 8453,
+  name: 'Base',
+  network: 'base',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-base/7e7c502b-2f81-4fd2-87ea-33bc2ae559d9'] },
+    public: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-base/7e7c502b-2f81-4fd2-87ea-33bc2ae559d9'] },
+  },
+});
+
+export const optimism = defineChain({
+  id: 10,
+  name: 'Optimism',
+  network: 'optimism',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-op/090dfde9-0c04-4a42-a236-de3427df29c8'] },
+    public: { http: ['https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-op/090dfde9-0c04-4a42-a236-de3427df29c8'] },
+  },
+});
 
 export const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238") as Address
 // SimpleAccountFactory for v0.6 (deployed by eth-infinitism)

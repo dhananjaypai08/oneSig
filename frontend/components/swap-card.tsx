@@ -86,7 +86,7 @@ export function SwapCard() {
   const { switchChain } = useSwitchChain()
   const { toast } = useToast()
 
-  const [selectedChain, setSelectedChain] = useState(base.id)
+  const [selectedChain, setSelectedChain] = useState<number>(base.id)
   const [fromToken, setFromToken] = useState<number>(0)
   const [toToken, setToToken] = useState<number>(1)
   const [amount, setAmount] = useState("")

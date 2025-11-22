@@ -218,8 +218,8 @@ export default function AppPage() {
             <a href="https://uniswap.org" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
               Uniswap
             </a>
-            <a href="https://docs.availproject.org/docs/nexus" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-              Avail
+            <a href="https://docs.ethereuminteroplayer.com/sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
+              Ethereum Interop Layer
             </a>
           </div>
         </div>

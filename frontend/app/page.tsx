@@ -40,7 +40,7 @@ export default function Home() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link
-              href="https://docs.availproject.org/docs/nexus"
+              href="https://docs.ethereuminteroplayer.com/overview.html"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center rounded-full border border-white/10 bg-white/5 backdrop-blur-sm px-6 py-3.5 text-base font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all duration-200"
@@ -151,9 +151,9 @@ export default function Home() {
               href="https://uniswap.org"
             />
             <IntegrationCard
-              name="Avail Nexus"
+              name="EIL"
               description="Unified balances"
-              href="https://docs.availproject.org/docs/nexus"
+              href="https://docs.ethereuminteroplayer.com/overview.html"
             />
             <IntegrationCard
               name="EIL Protocol"

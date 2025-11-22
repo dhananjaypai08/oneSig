@@ -291,13 +291,15 @@ export function SwapCard() {
                 key={chain.id}
                 onClick={() => handleChainSelect(chain.id)}
                 disabled={isLoading}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                   selectedChain === chain.id
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
+                    : "bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold dark:bg-zinc-700">
+                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+                  selectedChain === chain.id ? "bg-emerald-500/30 text-emerald-300" : "bg-zinc-700 text-zinc-300"
+                }`}>
                   {chain.icon}
                 </span>
                 {chain.name}
@@ -307,8 +309,8 @@ export function SwapCard() {
         </div>
 
         {chainId !== selectedChain && (
-          <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-2 dark:bg-amber-950 dark:border-amber-800">
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+          <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+            <p className="text-xs text-amber-400">
               Switch to {SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name} to swap
             </p>
           </div>
@@ -317,15 +319,18 @@ export function SwapCard() {
 
       <CardContent className="space-y-4">
         {step === "success" ? (
-          <div className="flex flex-col items-center gap-4 py-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-pulse" />
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                <svg className="h-7 w-7 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
             </div>
             <div className="text-center">
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">Swap complete!</p>
-              <p className="text-sm text-zinc-500">
+              <p className="font-semibold text-white text-lg">Swap complete!</p>
+              <p className="text-sm text-zinc-400 mt-1">
                 {amount} {fromTokenData?.symbol} → {toTokenData?.symbol}
               </p>
             </div>
@@ -334,27 +339,30 @@ export function SwapCard() {
                 href={getExplorerUrl(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 underline"
+                className="text-sm text-emerald-400 hover:text-emerald-300 underline transition-colors"
               >
                 View transaction
               </a>
             )}
-            <Button onClick={reset} variant="secondary" size="sm">
+            <Button onClick={reset} variant="outline" size="sm">
               New swap
             </Button>
           </div>
         ) : step === "error" ? (
-          <div className="flex flex-col items-center gap-4 py-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
-              <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-red-500/20 blur-xl animate-pulse" />
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-red-500/20 border border-red-500/30">
+                <svg className="h-7 w-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
             </div>
             <div className="text-center">
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">Swap failed</p>
-              <p className="max-w-xs text-sm text-zinc-500">{error}</p>
+              <p className="font-semibold text-white text-lg">Swap failed</p>
+              <p className="max-w-xs text-sm text-zinc-400 mt-1">{error}</p>
             </div>
-            <Button onClick={reset} variant="secondary" size="sm">
+            <Button onClick={reset} variant="outline" size="sm">
               Try again
             </Button>
           </div>
@@ -362,16 +370,16 @@ export function SwapCard() {
           <>
             {/* From Token */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-500">From</label>
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">From</label>
               <div className="flex gap-2">
                 <select
                   value={fromToken}
                   onChange={(e) => setFromToken(Number(e.target.value))}
                   disabled={isLoading}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer"
                 >
                   {tokens.map((token, idx) => (
-                    <option key={token.address} value={idx} disabled={idx === toToken}>
+                    <option key={token.address} value={idx} disabled={idx === toToken} className="bg-zinc-900 text-white">
                       {token.symbol}
                     </option>
                   ))}
@@ -392,9 +400,9 @@ export function SwapCard() {
               <button
                 onClick={handleSwapTokens}
                 disabled={isLoading}
-                className="rounded-full bg-zinc-100 p-2 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                className="group rounded-full bg-emerald-500/10 border border-emerald-500/20 p-2.5 hover:bg-emerald-500/20 hover:border-emerald-500/30 transition-all duration-200"
               >
-                <svg className="h-4 w-4 text-zinc-600 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                 </svg>
               </button>
@@ -402,37 +410,37 @@ export function SwapCard() {
 
             {/* To Token */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-500">To</label>
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">To</label>
               <div className="flex gap-2">
                 <select
                   value={toToken}
                   onChange={(e) => setToToken(Number(e.target.value))}
                   disabled={isLoading}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer"
                 >
                   {tokens.map((token, idx) => (
-                    <option key={token.address} value={idx} disabled={idx === fromToken}>
+                    <option key={token.address} value={idx} disabled={idx === fromToken} className="bg-zinc-900 text-white">
                       {token.symbol}
                     </option>
                   ))}
                 </select>
-                <div className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
+                <div className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-zinc-500">
                   Output amount (estimated)
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 dark:bg-red-950 dark:border-red-800">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3">
+                <p className="text-sm text-red-400">{error}</p>
               </div>
             )}
 
             {isLoading && (
-              <div className="space-y-2 rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900">
-                <div className="flex items-center gap-2">
+              <div className="space-y-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 p-4">
+                <div className="flex items-center gap-3">
                   <Loader size="sm" />
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <span className="text-sm text-zinc-300">
                     {stepMessages[step]}
                   </span>
                 </div>

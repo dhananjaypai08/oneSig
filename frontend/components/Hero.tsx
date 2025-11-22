@@ -230,7 +230,7 @@ export function Hero() {
               </h1>
               <p className="mt-3 text-sm/6 text-emerald-100/85 max-w-prose">
                 Convert any token to USDC on any chain with a single click. Protect your positions before it's too late.
-                Powered by Uniswap, Avail Nexus, and EIP-7702 account abstraction.
+                Powered by Ethereum InterOp Layer, Uniswap, and EIP-7702 account abstraction.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link
@@ -241,7 +241,7 @@ export function Hero() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  href="https://docs.availproject.org/docs/nexus"
+                  href="https://docs.ethereuminteroplayer.com/sdk/basics.html"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center rounded-full border border-emerald-400/50 bg-emerald-600/10 px-4 py-2 text-sm font-medium text-emerald-50 backdrop-blur hover:bg-emerald-600/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
@@ -276,7 +276,7 @@ export function Hero() {
             </button>
             <Plus className="w-3 h-3 text-white stroke-[2.5]" />
             <button className="rounded-full border border-white bg-transparent px-3 py-1 text-xs font-bold text-white hover:bg-white/10 transition-colors">
-              Avail Nexus
+              Cross-chain Multi Batch
             </button>
             <Plus className="w-3 h-3 text-white stroke-[2.5]" />
             <button className="rounded-full border border-white bg-transparent px-3 py-1 text-xs font-bold text-white hover:bg-white/10 transition-colors">

@@ -218,7 +218,7 @@ export default function AppPage() {
             <a href="https://uniswap.org" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
               Uniswap
             </a>
-            <a href="https://docs.ethereuminteroplayer.com/sdk" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
+            <a href="https://docs.ethereuminteroplayer.com/overview.html" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
               Ethereum Interop Layer
             </a>
           </div>

@@ -76,9 +76,8 @@ export async function dustSweep(
 
         batchBuilder.endBatch()
     }
-
-    console.log("[DustSweep] Building and signing transaction...")
-    const executor = await builder.useAccount(account).buildAndSign()
+    const executor = await builder.useAccount(account).buildAndSign();
+    console.log("executor: ", executor);
 
     console.log("[DustSweep] Executing transaction...")
     console.log(executor)

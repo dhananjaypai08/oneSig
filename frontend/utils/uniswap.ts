@@ -1,8 +1,8 @@
-import { Token as UniswapToken, CurrencyAmount } from '@uniswap/sdk-core';
-import { AlphaRouter, SwapType, TradeType,  } from '@uniswap/smart-order-router'; // or '@uniswap/alpha-router'
+import { Token as UniswapToken, CurrencyAmount, TradeType, Percent } from '@uniswap/sdk-core';
+import { AlphaRouter, SwapType } from '@uniswap/smart-order-router'; // or '@uniswap/alpha-router'
 import {ethers} from 'ethers';
 
-async function generateSwapCalldata(
+export async function generateSwapCalldata(
     fromTokenAddress: string,
     amount: string,          // input amount in token decimals, e.g. '1000000000000000000' for 1 ETH
     toTokenAddress: string,

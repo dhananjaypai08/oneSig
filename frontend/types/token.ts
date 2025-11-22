@@ -6,7 +6,14 @@ export type Token = {
     name: "USDT" | "DAI" | "WETH"
 }
 
-export const TokenAddresses = {
+export const TokenAddresses: {
+    [key: number]: {
+        USDC: Address;
+        USDT: Address;
+        WETH: Address,
+        DAI: Address
+    }
+} = {
     10: {
         "USDC": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
         "USDT": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",

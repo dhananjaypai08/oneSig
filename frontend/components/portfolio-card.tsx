@@ -1,15 +1,68 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useAccount } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import type { Address } from "viem"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader } from "@/components/ui/loader"
+import { Loader, ProgressBar } from "@/components/ui/loader"
 import { readAllBalances, formatDisplayBalance, type AggregatedBalance } from "@/lib/balance-reader"
 import { SUPPORTED_CHAINS } from "@/lib/tokens"
+import { createEilSdk } from "@/lib/eil-sdk"
+import { dustSweep } from "@/utils/dustSweep"
+import { Token } from "@/types/token"
+import { CallbackType, type ExecCallback, type ExecCallbackData } from "@eil-protocol/sdk"
+import { ExternalLink } from "lucide-react"
+
+type SweepStep = "idle" | "initializing" | "sweeping" | "confirming" | "success" | "error"
+
+type TransactionResult = {
+  chainId: number
+  chainName: string
+  txHash: string
+  status: "success" | "failed"
+  revertReason?: string
+}
+
+const EXPLORER_BASE_URL = "https://explorer.syndika.io/tx"
+
+const getChainName = (chainId: number): string => {
+  const names: Record<number, string> = {
+    42161: "Arbitrum",
+    8453: "Base",
+    10: "Optimism",
+  }
+  return names[chainId] || `Chain ${chainId}`
+}
+
+const getChainIcon = (chainId: number): string => {
+  const icons: Record<number, string> = {
+    42161: "https://assets.coingecko.com/coins/images/16547/small/arb.jpg",
+    8453: "https://assets.coingecko.com/asset_platforms/images/131/small/base-network.png",
+    10: "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
+  }
+  return icons[chainId] || ""
+}
+
+const stepProgress: Record<SweepStep, number> = {
+  idle: 0,
+  initializing: 20,
+  sweeping: 50,
+  confirming: 75,
+  success: 100,
+  error: 0,
+}
+
+const stepMessages: Record<SweepStep, string> = {
+  idle: "",
+  initializing: "Initializing SDK...",
+  sweeping: "Executing cross-chain swaps...",
+  confirming: "Waiting for confirmations...",
+  success: "Dust sweep complete!",
+  error: "Sweep failed",
+}
 
 export function PortfolioCard() {
   const { address, isConnected } = useAccount()
@@ -17,6 +70,14 @@ export function PortfolioCard() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedToken, setExpandedToken] = useState<string | null>(null)
+
+  const [selectedChains, setSelectedChains] = useState<Set<number>>(
+    new Set(SUPPORTED_CHAINS.map(c => c.id))
+  )
+  const [sweepStep, setSweepStep] = useState<SweepStep>("idle")
+  const [sweepError, setSweepError] = useState<string | null>(null)
+  const [completedChains, setCompletedChains] = useState<number>(0)
+  const [transactionResults, setTransactionResults] = useState<TransactionResult[]>([])
 
   const handleFetchBalances = async () => {
     if (!address) {
@@ -29,7 +90,7 @@ export function PortfolioCard() {
 
     try {
       const result = await readAllBalances(address as Address)
-      console.log("Portfolio balances:", result)
+      // console.log("Portfolio balances:", result)
       setBalances(result)
     } catch (e) {
       console.error("Fetch balances error:", e)
@@ -39,23 +100,176 @@ export function PortfolioCard() {
     }
   }
 
-  const tokensWithBalance = balances.filter(b => b.totalBalance > BigInt(0))
+  const toggleChain = (chainId: number) => {
+    setSelectedChains(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(chainId)) {
+        if (newSet.size > 1) {
+          newSet.delete(chainId)
+        }
+      } else {
+        newSet.add(chainId)
+      }
+      return newSet
+    })
+  }
 
-  // Calculate total USD value (simplified - assumes 1:1 for stablecoins, would need price feed for real value)
+  const selectAllChains = () => {
+    setSelectedChains(new Set(SUPPORTED_CHAINS.map(c => c.id)))
+  }
+
+  const getTokensToSweep = useCallback((): { [key: number]: Token[] } => {
+    const tokensMap: { [key: number]: Token[] } = {}
+    const chainIds = [42161, 8453, 10]
+
+    for (const chainId of chainIds) {
+      tokensMap[chainId] = []
+    }
+
+    // console.log('[getTokensToSweep] Processing', balances.length, 'tokens')
+
+    for (const aggregatedBalance of balances) {
+      const symbol = aggregatedBalance.token.symbol
+
+      if (symbol === "USDC" || symbol === "ETH") continue
+      if (symbol !== "WETH" && symbol !== "USDT" && symbol !== "DAI") continue
+
+      // console.log(`[getTokensToSweep] ${symbol}: total=${aggregatedBalance.totalBalance.toString()}, chains with balance:`,
+      //   aggregatedBalance.chains.map(c => `${c.chain.name}(${c.balance.toString()})`))
+
+      for (const chainBalance of aggregatedBalance.chains) {
+        const chainId = chainBalance.chain.id
+
+        if (!selectedChains.has(chainId)) continue
+        if (chainBalance.balance <= BigInt(0)) continue
+
+        const tokenAddress = aggregatedBalance.token.addresses[chainId]
+        if (!tokenAddress) continue
+
+        // console.log(`[getTokensToSweep] + ${symbol} on ${chainBalance.chain.name}`)
+        tokensMap[chainId].push({
+          address: tokenAddress,
+          value: chainBalance.balance,
+          name: symbol as "USDT" | "DAI" | "WETH",
+          decimals: aggregatedBalance.token.decimals,
+        })
+      }
+    }
+
+    return tokensMap
+  }, [balances, selectedChains])
+
+  const handleDustSweep = async () => {
+    if (!address) {
+      setSweepError("Please connect your wallet first")
+      return
+    }
+
+    const tokensToSweep = getTokensToSweep()
+    const totalTokens = Object.values(tokensToSweep).flat().length
+
+    if (totalTokens === 0) {
+      setSweepError("No tokens to sweep. Only WETH, USDT, and DAI with balance can be swept to USDC.")
+      return
+    }
+
+    setSweepError(null)
+    setSweepStep("initializing")
+    setCompletedChains(0)
+    setTransactionResults([])
+
+    const activeChainIds = [42161, 8453, 10].filter(
+      chainId => (tokensToSweep[chainId] || []).length > 0
+    )
+
+    try {
+      const { sdk, account, walletAddress } = await createEilSdk()
+
+      setSweepStep("sweeping")
+
+      const callback: ExecCallback = (data: ExecCallbackData) => {
+        const { type, index, revertReason, txHash } = data
+        console.log("Dust sweep callback:", { type, index, revertReason, txHash })
+
+        const chainId = activeChainIds[index]
+
+        if (type === CallbackType.Done && txHash && chainId) {
+          setCompletedChains(prev => prev + 1)
+          setTransactionResults(prev => [...prev, {
+            chainId,
+            chainName: getChainName(chainId),
+            txHash,
+            status: "success",
+          }])
+        } else if (type === CallbackType.Failed && chainId) {
+          console.error("Chain failed:", index, revertReason)
+          setTransactionResults(prev => [...prev, {
+            chainId,
+            chainName: getChainName(chainId),
+            txHash: txHash || "",
+            status: "failed",
+            revertReason: revertReason?.toString(),
+          }])
+        }
+      }
+
+      await dustSweep(walletAddress, sdk, account, tokensToSweep, callback)
+
+      setSweepStep("confirming")
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      setSweepStep("success")
+      setTimeout(() => {
+        handleFetchBalances()
+      }, 3000)
+
+    } catch (e: unknown) {
+      console.error("Dust sweep error:", e)
+      setSweepStep("error")
+      const errorMessage = e instanceof Error ? e.message : "Dust sweep failed"
+      setSweepError(errorMessage.includes("user rejected") ? "Transaction rejected" : errorMessage)
+    }
+  }
+
+  const resetSweep = () => {
+    setSweepStep("idle")
+    setSweepError(null)
+    setCompletedChains(0)
+    setTransactionResults([])
+  }
+
+  const sweepableTokens = getTokensToSweep()
+  const totalSweepableTokens = Object.values(sweepableTokens).flat().length
+  const isSweeping = ["initializing", "sweeping", "confirming"].includes(sweepStep)
+
   const calculateTotalUSD = (): number => {
     return balances.reduce((sum, b) => {
       const balance = parseFloat(b.formattedTotal)
-      // Simple heuristic: stablecoins are ~$1, ETH needs a price feed
       if (b.token.symbol === 'USDC' || b.token.symbol === 'USDT' || b.token.symbol === 'DAI') {
         return sum + balance
       }
-      // For ETH/WETH, we'd need a price feed - using placeholder
       if (b.token.symbol === 'ETH' || b.token.symbol === 'WETH') {
-        return sum + balance * 2500 // Placeholder ETH price
+        return sum + balance * 2500
       }
       return sum
     }, 0)
   }
+
+  const getFilteredBalances = (): AggregatedBalance[] => {
+    return balances.map(b => ({
+      ...b,
+      chains: b.chains.filter(c => selectedChains.has(c.chain.id)),
+      totalBalance: b.chains
+        .filter(c => selectedChains.has(c.chain.id))
+        .reduce((sum, c) => sum + c.balance, BigInt(0)),
+    })).map(b => ({
+      ...b,
+      formattedTotal: (Number(b.totalBalance) / Math.pow(10, b.token.decimals)).toString(),
+    }))
+  }
+
+  const filteredBalances = getFilteredBalances()
+  const filteredTokensWithBalance = filteredBalances.filter(b => b.totalBalance > BigInt(0))
 
   if (!isConnected) {
     return (
@@ -80,7 +294,7 @@ export function PortfolioCard() {
           <div>
             <CardTitle>Portfolio</CardTitle>
             <CardDescription>
-              {SUPPORTED_CHAINS.map(c => c.name).join(' • ')}
+              Select chains to view & sweep
             </CardDescription>
           </div>
           <ConnectButton
@@ -88,6 +302,42 @@ export function PortfolioCard() {
             chainStatus="icon"
             showBalance={false}
           />
+        </div>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs uppercase tracking-wide text-zinc-500">Chains:</span>
+            <button
+              onClick={selectAllChains}
+              className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Select All
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SUPPORTED_CHAINS.map((chain) => (
+              <button
+                key={chain.id}
+                onClick={() => toggleChain(chain.id)}
+                disabled={isSweeping}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                  selectedChains.has(chain.id)
+                    ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
+                    : "bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <img
+                  src={chain.icon}
+                  alt={chain.name}
+                  className="w-4 h-4 rounded-full"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none"
+                  }}
+                />
+                {chain.name}
+              </button>
+            ))}
+          </div>
         </div>
       </CardHeader>
 
@@ -98,10 +348,9 @@ export function PortfolioCard() {
           </div>
         )}
 
-        {/* Fetch Button */}
         <Button
           onClick={handleFetchBalances}
-          disabled={isLoading}
+          disabled={isLoading || isSweeping}
           className="w-full"
           size="sm"
         >
@@ -115,7 +364,6 @@ export function PortfolioCard() {
           )}
         </Button>
 
-        {/* Portfolio Summary */}
         {balances.length > 0 && (
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 p-4">
             <div className="absolute -top-12 -right-12 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
@@ -124,21 +372,227 @@ export function PortfolioCard() {
               ${calculateTotalUSD().toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-zinc-400 mt-1">
-              {tokensWithBalance.length} token{tokensWithBalance.length !== 1 ? "s" : ""} with balance
+              {filteredTokensWithBalance.length} token{filteredTokensWithBalance.length !== 1 ? "s" : ""} with balance on {selectedChains.size} chain{selectedChains.size !== 1 ? "s" : ""}
             </p>
           </div>
         )}
 
-        {/* Token List */}
-        {balances.length > 0 && (
+        {balances.length > 0 && sweepStep !== "success" && sweepStep !== "error" && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">Sweep to USDC</p>
+                <p className="text-xs text-zinc-400">
+                  {totalSweepableTokens > 0
+                    ? `${totalSweepableTokens} token${totalSweepableTokens !== 1 ? "s" : ""} to sweep`
+                    : "No sweepable tokens"}
+                </p>
+              </div>
+              <div className="text-right text-xs text-zinc-500">
+                WETH, USDT, DAI → USDC
+              </div>
+            </div>
+
+            {isSweeping && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <Loader size="sm" />
+                  <span className="text-sm text-zinc-300">
+                    {stepMessages[sweepStep]}
+                  </span>
+                </div>
+                <ProgressBar progress={stepProgress[sweepStep]} />
+                {completedChains > 0 && (
+                  <p className="text-xs text-zinc-400">
+                    {completedChains} chain{completedChains !== 1 ? "s" : ""} completed
+                  </p>
+                )}
+              </div>
+            )}
+
+            {sweepError && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-2">
+                <p className="text-xs text-red-400">{sweepError}</p>
+              </div>
+            )}
+
+            <Button
+              onClick={handleDustSweep}
+              disabled={isLoading || isSweeping || totalSweepableTokens === 0}
+              variant="outline"
+              className="w-full"
+              size="sm"
+            >
+              {isSweeping ? (
+                <>
+                  <Loader size="sm" />
+                  <span>Sweeping...</span>
+                </>
+              ) : (
+                `Sweep ${totalSweepableTokens} Token${totalSweepableTokens !== 1 ? "s" : ""} to USDC`
+              )}
+            </Button>
+          </div>
+        )}
+
+        {sweepStep === "success" && (
+          <div className="flex flex-col gap-4 py-5 px-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-lg animate-pulse" />
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                  <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Dust Sweep Complete!</p>
+                <p className="text-xs text-zinc-400">
+                  {transactionResults.filter(t => t.status === "success").length} transaction{transactionResults.filter(t => t.status === "success").length !== 1 ? "s" : ""} confirmed
+                </p>
+              </div>
+            </div>
+
+            {transactionResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Transactions</p>
+                <div className="space-y-1.5">
+                  {transactionResults.map((result, idx) => (
+                    <a
+                      key={idx}
+                      href={`${EXPLORER_BASE_URL}/${result.chainId}/${result.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`group flex items-center justify-between p-2.5 rounded-lg border transition-all duration-200 ${
+                        result.status === "success"
+                          ? "bg-white/[0.02] border-white/10 hover:bg-white/[0.05] hover:border-emerald-500/30"
+                          : "bg-red-500/5 border-red-500/20 hover:bg-red-500/10"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={getChainIcon(result.chainId)}
+                          alt={result.chainName}
+                          className="h-5 w-5 rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none"
+                          }}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-white">{result.chainName}</p>
+                          <p className="text-xs text-zinc-500 font-mono">
+                            {result.txHash.slice(0, 8)}...{result.txHash.slice(-6)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {result.status === "success" ? (
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            Success
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                            Failed
+                          </span>
+                        )}
+                        <ExternalLink className="h-3.5 w-3.5 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Button onClick={resetSweep} variant="outline" size="sm" className="w-full">
+              Done
+            </Button>
+          </div>
+        )}
+
+        {sweepStep === "error" && (
+          <div className="flex flex-col gap-4 py-5 px-4 rounded-xl border border-red-500/20 bg-red-500/5">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-red-500/20 blur-lg animate-pulse" />
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20 border border-red-500/30">
+                  <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Sweep Failed</p>
+                <p className="text-xs text-zinc-400">{sweepError}</p>
+              </div>
+            </div>
+
+            {transactionResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-wide text-zinc-500">Transactions</p>
+                <div className="space-y-1.5">
+                  {transactionResults.map((result, idx) => (
+                    <a
+                      key={idx}
+                      href={`${EXPLORER_BASE_URL}/${result.chainId}/${result.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`group flex items-center justify-between p-2.5 rounded-lg border transition-all duration-200 ${
+                        result.status === "success"
+                          ? "bg-emerald-500/5 border-emerald-500/20 hover:bg-emerald-500/10"
+                          : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05] hover:border-red-500/30"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={getChainIcon(result.chainId)}
+                          alt={result.chainName}
+                          className="h-5 w-5 rounded-full"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none"
+                          }}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-white">{result.chainName}</p>
+                          {result.txHash && (
+                            <p className="text-xs text-zinc-500 font-mono">
+                              {result.txHash.slice(0, 8)}...{result.txHash.slice(-6)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {result.status === "success" ? (
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            Success
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                            Failed
+                          </span>
+                        )}
+                        <ExternalLink className="h-3.5 w-3.5 text-zinc-500 group-hover:text-red-400 transition-colors" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Button onClick={resetSweep} variant="outline" size="sm" className="w-full">
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {balances.length > 0 && sweepStep === "idle" && (
           <div className="space-y-2 max-h-80 overflow-y-auto">
-            {tokensWithBalance.map((item) => {
+            {filteredTokensWithBalance.map((item) => {
               const isExpanded = expandedToken === item.token.symbol
               const chainsWithBalance = item.chains
 
               return (
                 <div key={item.token.symbol} className="rounded-xl border border-white/10 overflow-hidden">
-                  {/* Token Header */}
                   <button
                     onClick={() => setExpandedToken(isExpanded ? null : item.token.symbol)}
                     className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-all duration-200"
@@ -201,7 +655,6 @@ export function PortfolioCard() {
                     </div>
                   </button>
 
-                  {/* Chain Breakdown */}
                   {isExpanded && chainsWithBalance.length > 0 && (
                     <div className="border-t border-white/5 bg-zinc-900/50">
                       {chainsWithBalance.map((chainBalance) => (
@@ -233,14 +686,13 @@ export function PortfolioCard() {
               )
             })}
 
-            {/* Zero balance tokens */}
-            {balances.filter(b => b.totalBalance === BigInt(0)).length > 0 && (
+            {filteredBalances.filter(b => b.totalBalance === BigInt(0)).length > 0 && (
               <details className="rounded-xl border border-white/5">
                 <summary className="px-3 py-2 text-xs text-zinc-500 cursor-pointer hover:text-zinc-300 transition-colors">
-                  {balances.filter(b => b.totalBalance === BigInt(0)).length} tokens with zero balance
+                  {filteredBalances.filter(b => b.totalBalance === BigInt(0)).length} tokens with zero balance
                 </summary>
                 <div className="px-3 pb-2 flex flex-wrap gap-2">
-                  {balances.filter(b => b.totalBalance === BigInt(0)).map((item) => (
+                  {filteredBalances.filter(b => b.totalBalance === BigInt(0)).map((item) => (
                     <div key={item.token.symbol} className="flex items-center gap-1.5 bg-white/5 rounded-full px-2 py-1">
                       <img
                         src={item.token.icon}

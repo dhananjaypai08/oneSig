@@ -4,59 +4,53 @@ import { useState, useEffect } from "react"
 import { useAccount, useWalletClient, useChainId, useSwitchChain } from "wagmi"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import {
-  formatUnits,
   parseUnits,
   encodeFunctionData,
   erc20Abi,
   type Address,
-  type Hex,
 } from "viem"
-import { base, arbitrum, optimism, mainnet } from "viem/chains"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Loader, ProgressBar } from "@/components/ui/loader"
 import { useToast } from "@/hooks/use-toast"
+import { TokenAddresses } from "@/types/token"
+import { SUPPORTED_CHAINS } from "@/lib/tokens"
 
-// Supported chains for swapping
-const SUPPORTED_CHAINS = [
-  { id: base.id, name: "Base", icon: "B" },
-  { id: arbitrum.id, name: "Arbitrum", icon: "A" },
-  { id: optimism.id, name: "Optimism", icon: "O" },
-  { id: mainnet.id, name: "Ethereum", icon: "E" },
-]
+// Token info with decimals
+const TOKEN_INFO: Record<string, { symbol: string; decimals: number; name: string }> = {
+  USDC: { symbol: "USDC", decimals: 6, name: "USD Coin" },
+  USDT: { symbol: "USDT", decimals: 6, name: "Tether USD" },
+  WETH: { symbol: "WETH", decimals: 18, name: "Wrapped Ether" },
+  DAI: { symbol: "DAI", decimals: 18, name: "Dai Stablecoin" },
+}
 
-// Common tokens per chain
-const TOKENS: Record<number, { address: Address; symbol: string; decimals: number; name: string }[]> = {
-  [base.id]: [
-    { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", symbol: "USDC", decimals: 6, name: "USD Coin" },
-    { address: "0x4200000000000000000000000000000000000006", symbol: "WETH", decimals: 18, name: "Wrapped Ether" },
-    { address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", symbol: "cbBTC", decimals: 8, name: "Coinbase BTC" },
-  ],
-  [arbitrum.id]: [
-    { address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", symbol: "USDC", decimals: 6, name: "USD Coin" },
-    { address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", symbol: "WETH", decimals: 18, name: "Wrapped Ether" },
-    { address: "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f", symbol: "WBTC", decimals: 8, name: "Wrapped BTC" },
-  ],
-  [optimism.id]: [
-    { address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", symbol: "USDC", decimals: 6, name: "USD Coin" },
-    { address: "0x4200000000000000000000000000000000000006", symbol: "WETH", decimals: 18, name: "Wrapped Ether" },
-    { address: "0x68f180fcCe6836688e9084f035309E29Bf0A2095", symbol: "WBTC", decimals: 8, name: "Wrapped BTC" },
-  ],
-  [mainnet.id]: [
-    { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6, name: "USD Coin" },
-    { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", decimals: 18, name: "Wrapped Ether" },
-    { address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", symbol: "WBTC", decimals: 8, name: "Wrapped BTC" },
-  ],
+// Build tokens per chain from TokenAddresses
+function getTokensForChain(chainId: number): { address: Address; symbol: string; decimals: number; name: string }[] {
+  const chainTokens = TokenAddresses[chainId]
+  if (!chainTokens) return []
+
+  return Object.entries(chainTokens).map(([symbol, address]) => ({
+    address: address as Address,
+    symbol,
+    decimals: TOKEN_INFO[symbol]?.decimals ?? 18,
+    name: TOKEN_INFO[symbol]?.name ?? symbol,
+  }))
 }
 
 // Uniswap SwapRouter02 addresses per chain
 const SWAP_ROUTER: Record<number, Address> = {
-  [base.id]: "0x2626664c2603336E57B271c5C0b26F421741e481",
-  [arbitrum.id]: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-  [optimism.id]: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
-  [mainnet.id]: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+  8453: "0x2626664c2603336E57B271c5C0b26F421741e481", // Base
+  42161: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Arbitrum
+  10: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Optimism
+}
+
+// Explorer URLs per chain
+const EXPLORER_URLS: Record<number, string> = {
+  8453: "https://basescan.org",
+  42161: "https://arbiscan.io",
+  10: "https://optimistic.etherscan.io",
 }
 
 type SwapStep = "idle" | "approving" | "swapping" | "confirming" | "success" | "error"
@@ -86,7 +80,7 @@ export function SwapCard() {
   const { switchChain } = useSwitchChain()
   const { toast } = useToast()
 
-  const [selectedChain, setSelectedChain] = useState<number>(base.id)
+  const [selectedChain, setSelectedChain] = useState<number>(8453) // Base by default
   const [fromToken, setFromToken] = useState<number>(0)
   const [toToken, setToToken] = useState<number>(1)
   const [amount, setAmount] = useState("")
@@ -94,7 +88,7 @@ export function SwapCard() {
   const [error, setError] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
 
-  const tokens = TOKENS[selectedChain] || []
+  const tokens = getTokensForChain(selectedChain)
   const fromTokenData = tokens[fromToken]
   const toTokenData = tokens[toToken]
   const isLoading = ["approving", "swapping", "confirming"].includes(step)
@@ -160,7 +154,7 @@ export function SwapCard() {
         args: [routerAddress, amountIn],
       })
 
-      const approveTx = await walletClient.sendTransaction({
+      await walletClient.sendTransaction({
         to: fromTokenData.address,
         data: approveData,
       })
@@ -242,13 +236,7 @@ export function SwapCard() {
   }
 
   const getExplorerUrl = (hash: string) => {
-    const explorers: Record<number, string> = {
-      [base.id]: "https://basescan.org",
-      [arbitrum.id]: "https://arbiscan.io",
-      [optimism.id]: "https://optimistic.etherscan.io",
-      [mainnet.id]: "https://etherscan.io",
-    }
-    return `${explorers[selectedChain]}/tx/${hash}`
+    return `${EXPLORER_URLS[selectedChain] || "https://etherscan.io"}/tx/${hash}`
   }
 
   if (!isConnected) {
@@ -297,11 +285,14 @@ export function SwapCard() {
                     : "bg-white/5 border border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
-                  selectedChain === chain.id ? "bg-emerald-500/30 text-emerald-300" : "bg-zinc-700 text-zinc-300"
-                }`}>
-                  {chain.icon}
-                </span>
+                <img
+                  src={chain.icon}
+                  alt={chain.name}
+                  className="w-4 h-4 rounded-full"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none"
+                  }}
+                />
                 {chain.name}
               </button>
             ))}

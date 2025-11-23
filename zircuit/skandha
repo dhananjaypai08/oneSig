@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Load environment variables from .env file
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+else
+  echo ".env file not found!"
+  exit 1
+fi
+
+# Step 1: Pull the specified Docker image for linux/amd64 platform
+docker pull --platform linux/amd64 etherspot/skandha:v4-latest
+
+# Step 2: Tag the pulled image with the new name
+docker tag etherspot/skandha:v4-latest zircuit-garfield-testnet:latest
+
+# Step 3: Run the container with the required environment variables and options
+docker run --platform linux/amd64 --pull=never -d \
+  --name zircuit-garfield-testnet \
+  -p 14337:14337 \
+  -e SKANDHA_EIP7702="true" \
+  -e SKANDHA_GAS_FEE_IN_SIMULATION="true" \
+  -e SKANDHA_POLLING_INTERVAL="15000000" \
+  -e SKANDHA_BUNDLE_INTERVAL="2000" \
+  -e SKANDHA_NATIVE_TRACER="true" \
+  -e SKANDHA_PRECOMPILES="0x0000000000000000000000000000000000000001" \
+  -e SKANDHA_DISABLE_WATCH_CONTRACT="false" \
+  -e SKANDHA_VGL_MARKUP_PERCENT="4000" \
+  -e SKANDHA_CGL_MARKUP_PERCENT="2000" \
+  -e SKANDHA_PVG_MARKUP_PERCENT="3000" \
+  -e SKANDHA_PIMLICO_SIMULATIONS_CONTRACT="0xDda0F676d8BCe74ECad335CE94B34B45856199C3" \
+  -e SKANDHA_EP_SIMULATIONS_CONTRACT="0x721Ec385d5A6C1B20efDd17E0559FDaf07d951E8" \
+  -e SKANDHA_RELAYERS="$RELAYER_VALUE" \
+  -e SKANDHA_RPC="https://zircuit-garfield-testnet.drpc.org" \
+  -e SKANDHA_ENTRYPOINTS="0x433709009B8330FDa32311DF1C2AFA402eD8D009" \
+  zircuit-garfield-testnet:latest \
+  standalone \
+  --redirectRpc \
+  --metrics.enable \
+  --metrics.host=0.0.0.0

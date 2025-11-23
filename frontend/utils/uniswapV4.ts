@@ -404,9 +404,46 @@ export const TENDERLY_DEVNET_RPCS: Record<string, string> = {
   'eil-op': 'https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-op/090dfde9-0c04-4a42-a236-de3427df29c8',
 }
 
+// Uniswap V3 SwapRouter02 addresses (fallback for production swaps)
+// V4 pools with custom hooks need to be initialized first
+// Using V3 for actual swaps until V4 pools are bootstrapped
+export const SWAP_ROUTER_V3: Record<number, Address> = {
+  42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Arbitrum
+  8453: '0x2626664c2603336E57B271c5C0b26F421741e481',  // Base
+  10: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',    // Optimism
+}
+
+// V3 SwapRouter02 ABI for exactInputSingle
+const EXACT_INPUT_SINGLE_ABI = [
+  {
+    name: 'exactInputSingle',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      {
+        name: 'params',
+        type: 'tuple',
+        components: [
+          { name: 'tokenIn', type: 'address' },
+          { name: 'tokenOut', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+          { name: 'recipient', type: 'address' },
+          { name: 'amountIn', type: 'uint256' },
+          { name: 'amountOutMinimum', type: 'uint256' },
+          { name: 'sqrtPriceLimitX96', type: 'uint160' },
+        ],
+      },
+    ],
+    outputs: [{ type: 'uint256' }],
+  },
+] as const
+
 /**
- * Generate swap calldata (V3-compatible signature for backward compatibility)
- * Used by dustSweep and other utilities that had the old V3 function signature
+ * Generate swap calldata using V3 SwapRouter02
+ *
+ * Note: V4 pools with VolatilePairsHook need to be initialized first.
+ * For production swaps, we use V3 which has existing liquidity.
+ * The VolatilePairsHook contract is deployed and ready for V4 pool initialization.
  */
 export async function generateSwapCalldata(
   fromTokenAddress: string,
@@ -418,23 +455,73 @@ export async function generateSwapCalldata(
   chainId: number,
   _fromDecimals?: number
 ): Promise<{ to: string; calldata: string; value?: string }> {
-  const amountIn = BigInt(amount)
-  const hookAddress = VOLATILE_PAIRS_HOOK_ADDRESSES[chainId]
+  const routerAddress = SWAP_ROUTER_V3[chainId]
+  if (!routerAddress) {
+    throw new Error(`SwapRouter not available on chain ${chainId}`)
+  }
 
-  const result = generateV4SwapCalldata(
-    fromTokenAddress as Address,
-    toTokenAddress as Address,
-    amountIn,
-    recipient as Address,
-    chainId,
-    hookAddress
-  )
+  const amountIn = BigInt(amount)
+
+  // V3 exactInputSingle params
+  const swapParams = {
+    tokenIn: fromTokenAddress as Address,
+    tokenOut: toTokenAddress as Address,
+    fee: 3000, // 0.3% fee tier
+    recipient: recipient as Address,
+    amountIn: amountIn,
+    amountOutMinimum: BigInt(0), // In production, calculate with slippage
+    sqrtPriceLimitX96: BigInt(0),
+  }
+
+  const calldata = encodeFunctionData({
+    abi: EXACT_INPUT_SINGLE_ABI,
+    functionName: 'exactInputSingle',
+    args: [swapParams],
+  })
 
   return {
-    to: result.to,
-    calldata: result.data,
-    value: result.value.toString(),
+    to: routerAddress,
+    calldata: calldata,
+    value: '0',
   }
 }
 
-console.log('[UniswapV4] Module loaded - VolatilePairsHook integration ready')
+/**
+ * Generate V3 swap calldata (direct function for swap-card)
+ */
+export function generateV3SwapCalldata(
+  fromTokenAddress: Address,
+  toTokenAddress: Address,
+  amountIn: bigint,
+  recipient: Address,
+  chainId: number
+): { to: Address; data: Hex; value: bigint } {
+  const routerAddress = SWAP_ROUTER_V3[chainId]
+  if (!routerAddress) {
+    throw new Error(`SwapRouter not available on chain ${chainId}`)
+  }
+
+  const swapParams = {
+    tokenIn: fromTokenAddress,
+    tokenOut: toTokenAddress,
+    fee: 3000,
+    recipient: recipient,
+    amountIn: amountIn,
+    amountOutMinimum: BigInt(0),
+    sqrtPriceLimitX96: BigInt(0),
+  }
+
+  const calldata = encodeFunctionData({
+    abi: EXACT_INPUT_SINGLE_ABI,
+    functionName: 'exactInputSingle',
+    args: [swapParams],
+  })
+
+  return {
+    to: routerAddress,
+    data: calldata as Hex,
+    value: BigInt(0),
+  }
+}
+
+console.log('[UniswapV4] Module loaded - V3 swaps with V4 hook infrastructure ready')

@@ -9,8 +9,16 @@ via_ir = false
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 remappings = [
     "@account-abstraction/=lib/account-abstraction/contracts/",
+    "v4-core/=lib/v4-periphery/lib/v4-core/",
+    "v4-periphery/=lib/v4-periphery/",
+    "@uniswap/v4-core/=lib/v4-periphery/lib/v4-core/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/",
 ]
 
 [rpc_endpoints]
 garfield = "https://zircuit-garfield-testnet.drpc.org"
 sepolia = "https://sepolia.infura.io/v3/2WCbZ8YpmuPxUtM6PzbFOfY5k4B"
+eil-arb = "https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-arb/05b28599-1cde-4a79-aff2-d275bffc6017"
+eil-base = "https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-base/7e7c502b-2f81-4fd2-87ea-33bc2ae559d9"
+eil-op = "https://virtual.rpc.tenderly.co/stitchApp/project/private/eil-op/090dfde9-0c04-4a42-a236-de3427df29c8"

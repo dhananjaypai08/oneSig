@@ -46,8 +46,8 @@ export function TransitionOverlay() {
 
     gsap.set(containerRef.current, { visibility: "visible" })
     gsap.set(wipeRef.current, { x: "-100%" })
-    gsap.set(logoContainerRef.current, { opacity: 0 })
-    gsap.set(logoRef.current, { scale: 0.5, rotation: -90 })
+    gsap.set(logoContainerRef.current, { opacity: 1 })
+    gsap.set(logoRef.current, { scale: 0.5, rotation: -90, opacity: 1 })
     gsap.set(shineRef.current, { x: "-100%", opacity: 0 })
 
     tl.to(wipeRef.current, {
@@ -95,7 +95,6 @@ export function TransitionOverlay() {
       duration: 0.30,
       ease: "power2.inOut",
     }, "-=0.15")
-
   }, [])
 
   useEffect(() => {
@@ -147,7 +146,7 @@ export function TransitionOverlay() {
       <div
         ref={logoContainerRef}
         className="absolute inset-0 flex items-center justify-center"
-        style={{ opacity: 0 }}
+        style={{ opacity: 1 }}
       >
         <div
           ref={logoRef}
@@ -160,7 +159,6 @@ export function TransitionOverlay() {
             <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-
           <div
             ref={shineRef}
             className="absolute inset-y-0 w-12 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"

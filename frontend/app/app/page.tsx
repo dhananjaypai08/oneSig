@@ -225,8 +225,8 @@ export default function AppPage() {
 
           {/* Cards Grid - Now with 3 columns */}
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Swap Card Wrapper - Takes 2 columns */}
-            <div className="lg:col-span-2 group relative">
+            {/* Swap Card Wrapper - Takes 1 column */}
+            <div className="lg:col-span-1 group relative">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
               <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden h-full">
                 <SwapCard />
@@ -234,7 +234,7 @@ export default function AppPage() {
             </div>
 
             {/* Side Cards Stack */}
-            <div className="space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               {/* Portfolio Card */}
               <div className="group relative">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />

@@ -281,7 +281,7 @@ export function SwapCard() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Swap Tokens</CardTitle>
-            <CardDescription>Uniswap V3</CardDescription>
+            <CardDescription>Uniswap V4</CardDescription>
           </div>
           <ConnectButton
             accountStatus="address"

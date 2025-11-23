@@ -78,6 +78,7 @@ export function PortfolioCard() {
   const [sweepError, setSweepError] = useState<string | null>(null)
   const [completedChains, setCompletedChains] = useState<number>(0)
   const [transactionResults, setTransactionResults] = useState<TransactionResult[]>([])
+  const [sweepPercentage, setSweepPercentage] = useState<number>(100)
 
   const handleFetchBalances = async () => {
     if (!address) {
@@ -118,7 +119,7 @@ export function PortfolioCard() {
     setSelectedChains(new Set(SUPPORTED_CHAINS.map(c => c.id)))
   }
 
-  const getTokensToSweep = useCallback((): { [key: number]: Token[] } => {
+  const getTokensToSweep = useCallback((percentage: number = 100): { [key: number]: Token[] } => {
     const tokensMap: { [key: number]: Token[] } = {}
     const chainIds = [42161, 8453, 10]
 
@@ -126,16 +127,11 @@ export function PortfolioCard() {
       tokensMap[chainId] = []
     }
 
-    // console.log('[getTokensToSweep] Processing', balances.length, 'tokens')
-
     for (const aggregatedBalance of balances) {
       const symbol = aggregatedBalance.token.symbol
 
       if (symbol === "USDC" || symbol === "ETH") continue
-      if (symbol !== "WETH" && symbol !== "USDT" && symbol !== "DAI") continue
-
-      // console.log(`[getTokensToSweep] ${symbol}: total=${aggregatedBalance.totalBalance.toString()}, chains with balance:`,
-      //   aggregatedBalance.chains.map(c => `${c.chain.name}(${c.balance.toString()})`))
+      if (symbol !== "SHIB" && symbol !== "TOSHI" && symbol !== "LDO") continue
 
       for (const chainBalance of aggregatedBalance.chains) {
         const chainId = chainBalance.chain.id
@@ -146,11 +142,14 @@ export function PortfolioCard() {
         const tokenAddress = aggregatedBalance.token.addresses[chainId]
         if (!tokenAddress) continue
 
-        // console.log(`[getTokensToSweep] + ${symbol} on ${chainBalance.chain.name}`)
+        // Calculate the amount based on percentage
+        const sweepAmount = (chainBalance.balance * BigInt(percentage)) / BigInt(100)
+        if (sweepAmount <= BigInt(0)) continue
+
         tokensMap[chainId].push({
           address: tokenAddress,
-          value: chainBalance.balance,
-          name: symbol as "USDT" | "DAI" | "WETH",
+          value: sweepAmount,
+          name: symbol as "TOSHI" | "LDO" | "SHIB",
           decimals: aggregatedBalance.token.decimals,
         })
       }
@@ -165,11 +164,11 @@ export function PortfolioCard() {
       return
     }
 
-    const tokensToSweep = getTokensToSweep()
+    const tokensToSweep = getTokensToSweep(sweepPercentage)
     const totalTokens = Object.values(tokensToSweep).flat().length
 
     if (totalTokens === 0) {
-      setSweepError("No tokens to sweep. Only WETH, USDT, and DAI with balance can be swept to USDC.")
+      setSweepError("No tokens to sweep. Only SHIB, TOSHI, and LDO with balance can be swept to USDC.")
       return
     }
 
@@ -238,17 +237,17 @@ export function PortfolioCard() {
     setTransactionResults([])
   }
 
-  const sweepableTokens = getTokensToSweep()
+  const sweepableTokens = getTokensToSweep(100)
   const totalSweepableTokens = Object.values(sweepableTokens).flat().length
   const isSweeping = ["initializing", "sweeping", "confirming"].includes(sweepStep)
 
   const calculateTotalUSD = (): number => {
     return balances.reduce((sum, b) => {
       const balance = parseFloat(b.formattedTotal)
-      if (b.token.symbol === 'USDC' || b.token.symbol === 'USDT' || b.token.symbol === 'DAI') {
+      if (b.token.symbol === 'USDC' || b.token.symbol === 'TOSHI' || b.token.symbol === 'LDO') {
         return sum + balance
       }
-      if (b.token.symbol === 'ETH' || b.token.symbol === 'WETH') {
+      if (b.token.symbol === 'ETH' || b.token.symbol === 'SHIB') {
         return sum + balance * 2500
       }
       return sum
@@ -348,21 +347,25 @@ export function PortfolioCard() {
           </div>
         )}
 
-        <Button
+        <button
           onClick={handleFetchBalances}
           disabled={isLoading || isSweeping}
-          className="w-full"
-          size="sm"
+          className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors disabled:opacity-50 disabled:pointer-events-none flex items-center gap-1.5 mx-auto"
         >
           {isLoading ? (
             <>
               <Loader size="sm" />
-              <span>Fetching Balances...</span>
+              <span>Fetching...</span>
             </>
           ) : (
-            "Fetch Balances"
+            <>
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Refresh Balances</span>
+            </>
           )}
-        </Button>
+        </button>
 
         {balances.length > 0 && (
           <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 p-4">
@@ -378,20 +381,77 @@ export function PortfolioCard() {
         )}
 
         {balances.length > 0 && sweepStep !== "success" && sweepStep !== "error" && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white">Sweep to USDC</p>
                 <p className="text-xs text-zinc-400">
                   {totalSweepableTokens > 0
-                    ? `${totalSweepableTokens} token${totalSweepableTokens !== 1 ? "s" : ""} to sweep`
+                    ? `${totalSweepableTokens} token${totalSweepableTokens !== 1 ? "s" : ""} available`
                     : "No sweepable tokens"}
                 </p>
               </div>
               <div className="text-right text-xs text-zinc-500">
-                WETH, USDT, DAI → USDC
+                TOSHI, SHIB, LDO → USDC
               </div>
             </div>
+
+            {totalSweepableTokens > 0 && !isSweeping && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-500">Amount to sweep</span>
+                  <span className="text-xs font-medium text-emerald-400">{sweepPercentage}%</span>
+                </div>
+                <div className="relative">
+                  <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-zinc-800 rounded-full overflow-hidden pointer-events-none">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-150"
+                      style={{ width: `${((sweepPercentage - 25) / 75) * 100}%` }}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    min="25"
+                    max="100"
+                    step="25"
+                    value={sweepPercentage}
+                    onChange={(e) => setSweepPercentage(Number(e.target.value))}
+                    className="relative w-full h-1 bg-transparent rounded-full appearance-none cursor-pointer z-10
+                      [&::-webkit-slider-thumb]:appearance-none
+                      [&::-webkit-slider-thumb]:w-3
+                      [&::-webkit-slider-thumb]:h-3
+                      [&::-webkit-slider-thumb]:rounded-full
+                      [&::-webkit-slider-thumb]:bg-emerald-400
+                      [&::-webkit-slider-thumb]:shadow-sm
+                      [&::-webkit-slider-thumb]:shadow-emerald-500/50
+                      [&::-webkit-slider-thumb]:transition-all
+                      [&::-webkit-slider-thumb]:hover:bg-emerald-300
+                      [&::-moz-range-thumb]:w-3
+                      [&::-moz-range-thumb]:h-3
+                      [&::-moz-range-thumb]:rounded-full
+                      [&::-moz-range-thumb]:bg-emerald-400
+                      [&::-moz-range-thumb]:border-0
+                      [&::-moz-range-thumb]:shadow-sm
+                      [&::-moz-range-thumb]:shadow-emerald-500/50"
+                  />
+                  <div className="flex justify-between mt-1">
+                    {[25, 50, 75, 100].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => setSweepPercentage(val)}
+                        className={`text-[10px] transition-colors ${
+                          sweepPercentage === val
+                            ? "text-emerald-400"
+                            : "text-zinc-600 hover:text-zinc-400"
+                        }`}
+                      >
+                        {val}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {isSweeping && (
               <div className="space-y-2">
@@ -419,9 +479,7 @@ export function PortfolioCard() {
             <Button
               onClick={handleDustSweep}
               disabled={isLoading || isSweeping || totalSweepableTokens === 0}
-              variant="outline"
               className="w-full"
-              size="sm"
             >
               {isSweeping ? (
                 <>
@@ -429,7 +487,7 @@ export function PortfolioCard() {
                   <span>Sweeping...</span>
                 </>
               ) : (
-                `Sweep ${totalSweepableTokens} Token${totalSweepableTokens !== 1 ? "s" : ""} to USDC`
+                `Sweep ${sweepPercentage}% to USDC`
               )}
             </Button>
           </div>

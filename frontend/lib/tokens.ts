@@ -61,8 +61,8 @@ export const TOKENS: TokenInfo[] = [
     },
   },
   {
-    symbol: 'WETH',
-    name: 'Wrapped Ether',
+    symbol: 'SHIB',
+    name: 'SHIBA Inu(WETH)',
     decimals: 18,
     icon: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
     addresses: {
@@ -73,8 +73,8 @@ export const TOKENS: TokenInfo[] = [
     },
   },
   {
-    symbol: 'USDT',
-    name: 'Tether USD',
+    symbol: 'TOSHI',
+    name: 'Toshi USD(USDT)',
     decimals: 6,
     icon: 'https://assets.coingecko.com/coins/images/325/small/Tether.png',
     addresses: {
@@ -85,8 +85,8 @@ export const TOKENS: TokenInfo[] = [
     },
   },
   {
-    symbol: 'DAI',
-    name: 'Dai Stablecoin',
+    symbol: 'LDO',
+    name: 'Lido DAO(DAI)',
     decimals: 18,
     icon: 'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
     addresses: {

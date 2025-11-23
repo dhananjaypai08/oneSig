@@ -280,7 +280,7 @@ export function Hero() {
             </button>
             <Plus className="w-3 h-3 text-white stroke-[2.5]" />
             <button className="rounded-full border border-white bg-transparent px-3 py-1 text-xs font-bold text-white hover:bg-white/10 transition-colors">
-              EIL Protocol
+              EIL
             </button>
           </div>
         </div>

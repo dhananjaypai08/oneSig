@@ -3,7 +3,6 @@ import { CrossChainSdk, FunctionCallAction, CallAction, IMultiChainSmartAccount,
 import { Address, erc20Abi, Hex } from "viem"
 import { generateSwapCalldata } from "./uniswap"
 import { providers } from "./ethersProviders"
-import { parseUnits } from "viem/utils"
 
 const ChainIds = [42161, 8453, 10]
 
@@ -39,14 +38,14 @@ export async function dustSweep(
         for (const token of chainTokens) {
             console.log(`[DustSweep] Generating swap for ${token.name}:`, {
                 address: token.address,
-                value: parseUnits("0.01", token.decimals).toString(),
+                value: token.value.toString(),
                 decimals: token.decimals,
             })
 
             try {
                 const uniswapCalldata = await generateSwapCalldata(
                     token.address,
-                    parseUnits("0.01", token.decimals).toString(),
+                    token.value.toString(),
                     TokenAddresses[chainId]["USDC"],
                     USDC_DECIMALS,
                     wallet,

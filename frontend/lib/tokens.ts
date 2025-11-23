@@ -32,6 +32,11 @@ export const SUPPORTED_CHAINS: ChainInfo[] = [
     name: 'Optimism',
     icon: 'https://assets.coingecko.com/coins/images/25244/small/Optimism.png',
   },
+  {
+    id: 48900,
+    name: 'Zircuit',
+    icon: 'https://assets.coingecko.com/asset_platforms/images/209/small/zircuit.jpeg',
+  },
 ]
 
 // Token definitions with addresses per chain
@@ -70,6 +75,7 @@ export const TOKENS: TokenInfo[] = [
       10: '0x4200000000000000000000000000000000000006',
       42161: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
       8453: '0x4200000000000000000000000000000000000006',
+      48900: "0x4200000000000000000000000000000000000006"
     },
   },
   {

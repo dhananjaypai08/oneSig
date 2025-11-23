@@ -69,6 +69,9 @@ const EXPLORER_URLS: Record<number, string> = {
   10: "https://optimistic.etherscan.io",
 }
 
+// Filter out Zircuit from supported chains for this component
+const SWAP_SUPPORTED_CHAINS = SUPPORTED_CHAINS.filter(chain => chain.id !== 48900)
+
 type SwapStep = "idle" | "approving" | "swapping" | "confirming" | "success" | "error"
 
 const stepProgress: Record<SwapStep, number> = {
@@ -150,7 +153,7 @@ export function SwapCard() {
     }
 
     if (chainId !== selectedChain) {
-      setError(`Please switch to ${SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name}`)
+      setError(`Please switch to ${SWAP_SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name}`)
       return
     }
 
@@ -291,7 +294,7 @@ export function SwapCard() {
         <div className="mt-4">
           <span className="text-xs uppercase tracking-wide text-zinc-500">Chain:</span>
           <div className="mt-2 flex flex-wrap gap-2">
-            {SUPPORTED_CHAINS.map((chain) => (
+            {SWAP_SUPPORTED_CHAINS.map((chain) => (
               <button
                 key={chain.id}
                 onClick={() => handleChainSelect(chain.id)}
@@ -319,7 +322,7 @@ export function SwapCard() {
         {chainId !== selectedChain && (
           <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
             <p className="text-xs text-amber-400">
-              Switch to {SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name} to swap
+              Switch to {SWAP_SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.name} to swap
             </p>
           </div>
         )}

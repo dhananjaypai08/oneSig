@@ -6,7 +6,7 @@ import { SwapCard } from "@/components/swap-card"
 import { PortfolioCard } from "@/components/portfolio-card"
 import { Toaster } from "@/components/ui/toaster"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
-import { ArrowLeft, Zap, Shield } from "lucide-react"
+import { ArrowLeft, Zap, Shield, ArrowRight, Sparkles } from "lucide-react"
 
 // Sound URLs from mixkit (royalty-free)
 const SOUNDS = {
@@ -223,22 +223,53 @@ export default function AppPage() {
             </p>
           </div>
 
-          {/* Cards Grid */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Swap Card Wrapper */}
-            <div className="group relative">
+          {/* Cards Grid - Now with 3 columns */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Swap Card Wrapper - Takes 2 columns */}
+            <div className="lg:col-span-2 group relative">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-              <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden">
+              <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden h-full">
                 <SwapCard />
               </div>
             </div>
 
-            {/* Portfolio Card Wrapper */}
-            <div className="group relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
-              <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden">
-                <PortfolioCard />
+            {/* Side Cards Stack */}
+            <div className="space-y-6">
+              {/* Portfolio Card */}
+              <div className="group relative">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+                <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden">
+                  <PortfolioCard />
+                </div>
               </div>
+
+              {/* Native Swap Link Card */}
+              <Link href="/native-swap" className="block group relative">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-emerald-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
+                <div className="relative rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl overflow-hidden p-6 hover:border-emerald-500/30 transition-colors">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      
+                      <div>
+                        <h3 className="text-white font-semibold">Native Swap</h3>
+                        <p className="text-xs text-zinc-500">Zircuit Network</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-zinc-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <p className="text-sm text-zinc-400">
+                    Wrap & unwrap ETH on Zircuit using EIP-7702 Smart Account
+                  </p>
+                  <div className="mt-4 flex items-center gap-2">
+                    <span className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+                      1:1 Rate
+                    </span>
+                    <span className="px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs text-purple-400">
+                      No Gas Fees
+                    </span>
+                  </div>
+                </div>
+              </Link>
             </div>
           </div>
         </div>

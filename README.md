@@ -4,11 +4,12 @@ OneSig is a lightweight, trust-minimized tool that consolidates a user’s ERC-2
 
 What it does:
 
-1. Given a user address and a list of EVM chains, One Sig:
-2. Reads ERC-20 balances (and optional allowances) for that address on each chain.
-3. Constructs a verifiable claim of aggregated value denominated in a chosen stablecoin (e.g., USDC).
-4. Executes cross-chain conversion by routing swaps on native AMMs / liquidity sources and settling a single stablecoin on a target chain or recipient wallet.
-5. Uses a small economic stake + challenge window to ensure correctness of cross-chain proofs and conversions in a trust-minimized manner.
+Given a user address and a list of EVM chains, One Sig:
+
+1. Reads ERC-20 balances (and optional allowances) for that address on each chain.
+2. Constructs a verifiable claim of aggregated value denominated in a chosen stablecoin (e.g., USDC).
+3. Executes cross-chain conversion by routing swaps on native AMMs / liquidity sources and settling a single stablecoin on a target chain or recipient wallet.
+4. Uses a small economic stake + challenge window to ensure correctness of cross-chain proofs and conversions in a trust-minimized manner.
 
 Architecture:
 

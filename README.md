@@ -1,53 +1,119 @@
-OneSig
+# OneSig
 
-OneSig is a lightweight, trust-minimized tool that consolidates a user’s ERC-20 balances across multiple EVM chains and atomically converts them into a single stablecoin position. Inspired by the Ethereum Interop Layer (EIL) design, OneSig enables cross-chain balance aggregation, routing, and on-chain settlement with explicit staking & challenge mechanics to minimize trust assumptions while remaining practical for end users (wallets, aggregators, hackathon demos).
+OneSig is a lightweight, trust minimized system that consolidates a user ERC20 balances across multiple EVM chains and settles them into a single USDC position with one signature. It applies ideas from the Ethereum Interop Layer, using stake and challenge based verification to keep cross chain settlement practical while preserving minimal trust assumptions.
 
-What it does:
+At a high level, OneSig reads a user balances on many L2s, produces a verifiable claim of total value, routes swaps through on chain liquidity, and finalizes a single USDC position on a destination chain. The goal is to feel like a single chain experience while retaining Ethereum style self custody and censorship resistance.
 
-Given a user address and a list of EVM chains, One Sig:
+## Background
 
-1. Reads ERC-20 balances (and optional allowances) for that address on each chain.
-2. Constructs a verifiable claim of aggregated value denominated in a chosen stablecoin (e.g., USDC).
-3. Executes cross-chain conversion by routing swaps on native AMMs / liquidity sources and settling a single stablecoin on a target chain or recipient wallet.
-4. Uses a small economic stake + challenge window to ensure correctness of cross-chain proofs and conversions in a trust-minimized manner.
+Ethereum rollups solved scalability but fragmented user balances. Each L2 has its own gas token, bridge, and sometimes its own wallet flow. Moving assets between them often requires trusted bridges, off chain solvers, or opaque intent systems.
 
-Architecture:
+The Ethereum Interop Layer, or EIL, is a family of designs and standards that aim to make this multichain environment feel like a single network. EIL builds on ERC 4337 style account abstraction, multichain signing, and a cross chain liquidity protocol. Users sign once for a multichain operation and execute calls directly from their own account on each chain.
 
-Client / SDK: Multi-chain reader that queries JSON-RPC providers for balances, token metadata, and live price quotes (on-chain where possible; fallbacks to oracle or indexer).
+In EIL, cross chain assets are moved through a VoucherRequest and Voucher mechanism. Users deposit assets on an origin chain and request a voucher for assets on a destination chain. Cross Chain Liquidity Providers, or XLPs, monitor protocol contracts, fulfil voucher requests, and receive fees, while a dispute system on L1 ensures that incorrect behavior can be challenged without trusting any coordinator.
 
-Coordinator Contract (on target chain): Receives a signed aggregation proposal, verifies merkleized balance proofs/receipts from source chains (using light client-ish receipts or fraud-proof hooks inspired by EIL), and accepts a stake from the proposer.
+OneSig takes these ideas and applies them to a focused problem: turning scattered ERC20 balances into a single USDC position with a single signature.
 
-Execution Agents: Off-chain relayers (or the proposer) assemble swap transactions across DEXs (Uniswap v3, Sushiswap, Balancer) and submit a signed execution plan. On-chain settlement occurs only after challenge window.
+## What OneSig Does
 
-Stake & Challenge: Proposer posts stake; anyone can challenge within a time window with a counter-proof. If challenge succeeds, stake slashed and state rolled back / corrected; otherwise, proposer’s execution proceeds and stake returned.
+Given a user address and a set of EVM chains, OneSig:
 
-Routing: Uses multi-hop routing with Uniswap v3 concentrated liquidity where available to reduce slippage and gas. Optionally aggregates liquidity via on-chain batching (for small tokens) to reduce tx counts.
+* Reads ERC20 balances for that address on each configured chain, optionally including allowances.
+* Normalizes balances into a chosen stablecoin, usually USDC, using on chain price sources where possible.
+* Builds an aggregation proposal that describes how to unwind positions on each chain into USDC.
+* Uses chain local liquidity, typically Uniswap v3 and other DEXs, to execute swaps per chain.
+* Settles a single USDC position on a target chain or recipient account.
+* Wraps the whole flow in a single signature from the user, suitable for account abstraction wallets and EIL style flows.
 
-Security primitives: Merkleized state snapshots, simple fraud-proof interface, ECDSA/eth_sign attestations, replay protection, and replay-resistant nonces per chain.
+The result is a one tap escape hatch that lets a user converge to USDC across chains without manually bridging, swapping, or managing gas on each L2.
 
-Why this is trust-minimized:
+## Architecture
 
-1. No single operator holds custody: the coordinator only accepts signed, verifiable proofs and requires proposer stake.
-2. Challenge window + on-chain verification replicates EIL’s philosophy: correctness enforced economically instead of relying on a centralized oracle.
-3. Uses existing battle-tested on-chain liquidity (Uniswap v3) for swaps to minimize composability & MEV surface.
+### Client and SDK
 
-Stack:
+The client and SDK:
 
-Ethereum Foundation: Research + protocol thinking — One Sig applies EIL concepts (stake, fraud proofs, minimal verification) to a practical UX problem (cross-chain balance consolidation), demonstrating research → implementation.
+* Query JSON RPC endpoints for balances, token metadata, and price quotes.
+* Construct a plan that describes which tokens to unwind and which routes to use.
+* Prepare a single signed authorization that can be interpreted by the coordinator contract.
 
-Uniswap Foundation: Deep Uniswap integration — routing leverages concentrated liquidity and v3 pools to minimize slippage and gas; demonstrates composability and liquidity-efficient conversions for real user balances.
+The client is intended to be embedded into wallets, aggregators, and dashboards that want to offer a one click exit to USDC.
 
-Zircuit (interop / zk / scalability sponsors): Designed for modular zk substitution — proofs can be upgraded to succinct zk attestations for faster finality and smaller on-chain verification costs, improving scalability and privacy for future iterations.
+### Coordinator Contract
 
-Quick start: 
+The coordinator contract on the target chain is responsible for:
 
-1. Clone repo
-2. yarn install
-3. Configure /.env with RPC endpoints for desired chains and a relayer private key
-4. yarn start — opens UI at http://localhost:3000 to demo aggregation and conversion flows
+* Receiving a signed aggregation proposal from the user.
+* Verifying merkleized balance proofs or receipts from source chains when available.
+* Tracking stakes posted by proposers and enforcing the challenge window.
+* Finalizing settlement once the challenge period passes without a valid dispute.
 
-Next steps:
+This design keeps custody with the user while allowing off chain actors to help with routing and execution.
 
-1. Replace fraud proofs with succinct zk attestations for instant finality.
-2. Integrate gasless relays and paymaster flows for onboarding.
-3. On-ramp for non-ERC20 assets (wrapped BTC, tokenized positions).
+### Execution Agents
+
+Execution agents, which can be run by integrators or independent operators, perform the heavy lifting:
+
+* Assemble swap transactions on DEXs such as Uniswap v3, Sushiswap, or Balancer.
+* Execute local swaps on each source chain to convert assets into USDC.
+* Submit transactions and return proofs or receipts that the coordinator can check.
+
+Agents are not trusted with user funds long term. Their proposals are backed by stake and can be challenged if incorrect.
+
+### Stake and Challenge
+
+To minimize trust, OneSig uses a simple stake and challenge model inspired by EIL:
+
+* Proposers post a stake when submitting an aggregation and execution plan.
+* A challenge window allows anyone to submit a counter proof if the plan was incorrect.
+* If a challenge is valid, the stake is slashed and the state is corrected or rolled back.
+* If no valid challenge is submitted, the plan is considered correct and the stake is returned.
+
+This encourages correct behavior without requiring a central operator.
+
+### Routing and Liquidity
+
+Routing prioritizes on chain liquidity and simple, observable behavior:
+
+* Use Uniswap v3 concentrated liquidity when available to reduce slippage.
+* Fall back to other DEXs such as Sushiswap or Balancer when needed.
+* Prefer simple multi hop routes that are easier to reason about.
+* Batch smaller positions where possible to reduce transaction count.
+
+## Why It Is Trust Minimized
+
+OneSig inherits many of the design goals of the Ethereum Interop Layer:
+
+* Users keep self custody. The coordinator verifies proofs and stakes but does not take custody of assets.
+* Execution is transparent. All swaps and settlements occur on chain through public liquidity.
+* Correctness is enforced economically through stake and challenge, not by trusting an opaque oracle or bridge.
+
+This makes OneSig a good fit for wallets and protocols that want a simple escape to USDC while respecting Ethereum security assumptions.
+
+## Getting Started
+
+### Clone the repository
+
+```bash
+git clone <repo url>
+cd oneSig
+```
+
+### Run the frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm run dev --webpack
+```
+
+This starts the UI locally and allows you to demo multi chain balance aggregation and conversion flows.
+
+### Environment configuration
+
+Create a `.env` file and configure:
+
+* RPC endpoints for each chain you want to support.
+* A relayer or operator key for signing and sending transactions where required.
+
+Refer to the `frontend` and `contracts` directories for the expected variable names and structure.

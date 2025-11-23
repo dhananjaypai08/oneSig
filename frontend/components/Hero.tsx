@@ -96,7 +96,7 @@ export function Hero() {
     }
 
     const pixels = Array.from(pixelGridRef.current.children)
-    const animationStepDuration = 0.45
+    const animationStepDuration = 0.18
     const actualPixelCount = pixels.length
     const staggerDuration = animationStepDuration / actualPixelCount
 
@@ -104,7 +104,7 @@ export function Hero() {
 
     tl.to(cardRef.current, {
       scale: 0.995,
-      duration: 0.2,
+      duration: 0.1,
       ease: "power2.in",
     })
 
@@ -115,7 +115,7 @@ export function Hero() {
           const el = target as HTMLElement
           return el.getAttribute("data-target-opacity") || "1"
         },
-        duration: 0.45,
+        duration: 0.18,
         ease: "power2.in",
         stagger: {
           each: staggerDuration,
@@ -129,17 +129,17 @@ export function Hero() {
       pixels,
       {
         opacity: 0,
-        duration: 0.3,
+        duration: 0.15,
         ease: "power2.out",
       },
-      `+=${animationStepDuration}`,
+      `+=${animationStepDuration * 0.5}`,
     )
 
     tl.to(
       cardRef.current,
       {
         scale: 1,
-        duration: 0.3,
+        duration: 0.15,
         ease: "power2.in",
       },
       "<",

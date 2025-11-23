@@ -18,6 +18,22 @@ import { useToast } from "@/hooks/use-toast"
 import { TokenAddresses } from "@/types/token"
 import { SUPPORTED_CHAINS } from "@/lib/tokens"
 
+// Success sound - satisfying chime
+const SUCCESS_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3"
+
+const playSuccessSound = () => {
+  if (typeof window !== "undefined") {
+    try {
+      const audio = new Audio(SUCCESS_SOUND_URL)
+      audio.volume = 0.4
+      audio.playbackRate = 0.9
+      audio.play().catch(() => {})
+    } catch {
+      // Silently fail
+    }
+  }
+}
+
 // Token info with decimals
 const TOKEN_INFO: Record<string, { symbol: string; decimals: number; name: string }> = {
   USDC: { symbol: "USDC", decimals: 6, name: "USD Coin" },
@@ -214,6 +230,7 @@ export function SwapCard() {
       setTxHash(swapTx)
 
       setStep("success")
+      playSuccessSound()
       toast({
         title: "Swap complete!",
         description: `Swapped ${amount} ${fromTokenData.symbol} for ${toTokenData.symbol}`,
@@ -429,8 +446,8 @@ export function SwapCard() {
 
             {isLoading && (
               <div className="space-y-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 p-4">
-                <div className="flex items-center gap-3">
-                  <Loader size="sm" />
+                <div className="flex items-center gap-4">
+                  <Loader size="sm" variant="bounce" />
                   <span className="text-sm text-zinc-300">
                     {stepMessages[step]}
                   </span>
@@ -447,7 +464,7 @@ export function SwapCard() {
             >
               {isLoading ? (
                 <>
-                  <Loader size="sm" />
+                  <Loader size="sm" variant="bounce" />
                   <span>Processing</span>
                 </>
               ) : chainId !== selectedChain ? (

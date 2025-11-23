@@ -16,6 +16,22 @@ import { Token } from "@/types/token"
 import { CallbackType, type ExecCallback, type ExecCallbackData } from "@eil-protocol/sdk"
 import { ExternalLink } from "lucide-react"
 
+// Success sound - satisfying chime
+const SUCCESS_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3"
+
+const playSuccessSound = () => {
+  if (typeof window !== "undefined") {
+    try {
+      const audio = new Audio(SUCCESS_SOUND_URL)
+      audio.volume = 0.4
+      audio.playbackRate = 0.9
+      audio.play().catch(() => {})
+    } catch {
+      // Silently fail
+    }
+  }
+}
+
 type SweepStep = "idle" | "initializing" | "sweeping" | "confirming" | "success" | "error"
 
 type TransactionResult = {
@@ -218,6 +234,7 @@ export function PortfolioCard() {
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       setSweepStep("success")
+      playSuccessSound()
       setTimeout(() => {
         handleFetchBalances()
       }, 3000)
@@ -454,9 +471,9 @@ export function PortfolioCard() {
             )}
 
             {isSweeping && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Loader size="sm" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <Loader size="sm" variant="bounce" />
                   <span className="text-sm text-zinc-300">
                     {stepMessages[sweepStep]}
                   </span>
@@ -483,7 +500,7 @@ export function PortfolioCard() {
             >
               {isSweeping ? (
                 <>
-                  <Loader size="sm" />
+                  <Loader size="sm" variant="bounce" />
                   <span>Sweeping...</span>
                 </>
               ) : (

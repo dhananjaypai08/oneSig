@@ -8,12 +8,27 @@ import { Toaster } from "@/components/ui/toaster"
 import { ConnectButton } from "@rainbow-me/rainbowkit"
 import { ArrowLeft, Zap, Shield } from "lucide-react"
 
-// Sound utility
+// Sound URLs from mixkit (royalty-free)
+const SOUNDS = {
+  click: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
+  success: "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3",
+}
+
+// Sound utility with preloading
+const audioCache: { [key: string]: HTMLAudioElement } = {}
+
 const playSound = (type: "click" | "success") => {
-  if (typeof window !== "undefined") {
-    const audio = new Audio(`/sounds/${type}.mp3`)
-    audio.volume = 0.3
-    audio.play().catch(() => {})
+  if (typeof window === "undefined") return
+
+  try {
+    if (!audioCache[type]) {
+      audioCache[type] = new Audio(SOUNDS[type])
+      audioCache[type].volume = type === "success" ? 0.5 : 0.2
+    }
+    audioCache[type].currentTime = 0
+    audioCache[type].play().catch(() => {})
+  } catch {
+    // Silently fail if audio doesn't work
   }
 }
 
@@ -25,21 +40,42 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Animated Background */}
+      {/* Enhanced Animated Background with Depth */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient Orbs */}
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald-500/[0.07] rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-600/[0.05] rounded-full blur-[100px] animate-pulse" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-emerald-500/[0.03] rounded-full blur-[150px]" />
+        {/* Base gradient for depth */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-950 to-black" />
 
-        {/* Grid Pattern */}
+        {/* Subtle radial gradient for center focus */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.03)_0%,transparent_70%)]" />
+
+        {/* Morphing gradient orbs */}
+        <div className="absolute top-[-10%] left-[10%] w-[600px] h-[600px] bg-emerald-500/[0.04] morphing-gradient blur-[120px]" />
+        <div className="absolute bottom-[-5%] right-[5%] w-[500px] h-[500px] bg-emerald-600/[0.03] morphing-gradient blur-[100px]" style={{ animationDelay: "-5s" }} />
+        <div className="absolute top-[40%] left-[60%] w-[400px] h-[400px] bg-emerald-400/[0.02] morphing-gradient blur-[80px]" style={{ animationDelay: "-10s" }} />
+
+        {/* Floating particles */}
+        <div className="absolute top-[20%] left-[15%] w-1 h-1 bg-emerald-400/40 rounded-full floating" style={{ animationDelay: "0s" }} />
+        <div className="absolute top-[60%] left-[80%] w-1.5 h-1.5 bg-emerald-500/30 rounded-full floating" style={{ animationDelay: "-2s" }} />
+        <div className="absolute top-[35%] left-[70%] w-1 h-1 bg-emerald-400/25 rounded-full floating" style={{ animationDelay: "-4s" }} />
+        <div className="absolute top-[75%] left-[25%] w-0.5 h-0.5 bg-emerald-300/35 rounded-full floating" style={{ animationDelay: "-1s" }} />
+        <div className="absolute top-[45%] left-[40%] w-1 h-1 bg-emerald-400/20 rounded-full floating" style={{ animationDelay: "-3s" }} />
+
+        {/* Subtle grid pattern with fade */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.02]"
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px"
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)`,
+            backgroundSize: "80px 80px",
+            maskImage: "radial-gradient(ellipse at center, black 0%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 0%, transparent 80%)"
           }}
         />
+
+        {/* Noise texture for depth */}
+        <div className="absolute inset-0 noise-texture" />
+
+        {/* Vignette overlay */}
+        <div className="absolute inset-0 vignette opacity-60" />
       </div>
 
       {/* Navigation */}

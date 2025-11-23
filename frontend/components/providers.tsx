@@ -5,6 +5,7 @@ import { WagmiProvider } from 'wagmi'
 import { RainbowKitProvider, darkTheme, lightTheme } from '@rainbow-me/rainbowkit'
 import { config } from '@/lib/wagmi'
 import { useState } from 'react'
+import { TransitionOverlay } from './page-transition'
 
 import '@rainbow-me/rainbowkit/styles.css'
 
@@ -17,20 +18,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <RainbowKitProvider
           theme={{
             lightMode: lightTheme({
-              accentColor: '#18181b',
+              accentColor: '#10b981',
               accentColorForeground: '#fafafa',
               borderRadius: 'medium',
               fontStack: 'system',
             }),
             darkMode: darkTheme({
-              accentColor: '#fafafa',
-              accentColorForeground: '#18181b',
+              accentColor: '#10b981',
+              accentColorForeground: '#fafafa',
               borderRadius: 'medium',
               fontStack: 'system',
             }),
           }}
           modalSize="compact"
         >
+          <TransitionOverlay />
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

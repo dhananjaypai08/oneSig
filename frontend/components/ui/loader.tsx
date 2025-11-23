@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 interface LoaderProps {
   className?: string
   size?: "sm" | "md" | "lg"
-  variant?: "default" | "emerald" | "pulse"
+  variant?: "default" | "emerald" | "pulse" | "bounce"
 }
 
 export function Loader({ className, size = "md", variant = "emerald" }: LoaderProps) {
@@ -13,6 +13,43 @@ export function Loader({ className, size = "md", variant = "emerald" }: LoaderPr
     sm: "h-4 w-4 border-[1.5px]",
     md: "h-5 w-5 border-2",
     lg: "h-8 w-8 border-[3px]",
+  }
+
+  const ballSizes = {
+    sm: "w-2 h-2",
+    md: "w-3 h-3",
+    lg: "w-4 h-4",
+  }
+
+  const shadowSizes = {
+    sm: "w-3 h-0.5",
+    md: "w-4 h-1",
+    lg: "w-5 h-1",
+  }
+
+  if (variant === "bounce") {
+    return (
+      <div className={cn("flex items-end gap-1.5 h-6", className)}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="relative flex flex-col items-center">
+            <div
+              className={cn(
+                "rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 bouncing-ball",
+                ballSizes[size]
+              )}
+              style={{ animationDelay: `${i * 0.12}s` }}
+            />
+            <div
+              className={cn(
+                "absolute -bottom-1 rounded-full bg-emerald-500/20 blur-[2px] ball-shadow",
+                shadowSizes[size]
+              )}
+              style={{ animationDelay: `${i * 0.12}s` }}
+            />
+          </div>
+        ))}
+      </div>
+    )
   }
 
   if (variant === "pulse") {

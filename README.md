@@ -127,6 +127,11 @@ Skandha bundles are packaged in a simple Docker runner.
 
 ### **Start the Zircuit bundler locally**
 
+Create a .env file within `zircuit` folder with the following:
+```bash
+RELAYER_VALUE=<YOUR_PRIVATE_KEY> #Essential for bundler to broadcast user operations on chain.
+```
+
 ```bash
 cd zircuit
 ./skandha
